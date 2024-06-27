@@ -1,0 +1,9 @@
+{
+   "autoload": {
+       "psr-4": {"Includes\\": "includes"},
+	   "classmap": ["includes/"]
+    },
+   "require": {
+      "phpseclib/phpseclib": "^3.0"
+   }
+}
