@@ -342,8 +342,8 @@ class StandardizeCSV {
     
     // Usage
     function run() {
-        $inputFile = ABSPATH . 'wp-content/uploads/2024/06/SanMar_EPDD.csv'; // Local file path
-        $outputFile = 'output.csv';
+        $inputFile = ABSPATH . 'wp-content/uploads/VendorIntegration/FilteredbyStyle.csv'; 
+        $outputFile = 'FinalStandardize.csv';
     
         $this->handleCsvMapping($inputFile, 'temp.csv');
         $this->removeDuplicateRows('temp.csv', $outputFile);

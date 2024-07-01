@@ -49,14 +49,11 @@ class Admin extends BaseController {
     public function admin_index() {
         global $getThisTemplates;
     
-        // Check if form is submitted
+        // FETCH CSV
         if (isset($_POST['create_file'])) {
-            // Optionally, verify nonce for security
             if (!isset($_POST['create_file_nonce_field']) || !wp_verify_nonce($_POST['create_file_nonce_field'], 'create_file_nonce')) {
-                die('Security check'); // Handle unauthorized access here
+                die('Security check'); 
             }
-    
-            // Call the file creation logic
             $create_file_instance = new \Includes\Base\FetchCSV();
             $attachment_id = $create_file_instance->create_file();
     
@@ -68,24 +65,202 @@ class Admin extends BaseController {
         }
 
 
-        // Check if form is submitted
+        // STANDARDIZE CSV
         if (isset($_POST['standardize_csv'])) {
-            // Optionally, verify nonce for security
             if (!isset($_POST['standardize_csv_nonce_field']) || !wp_verify_nonce($_POST['standardize_csv_nonce_field'], 'standardize_csv_nonce')) {
-                die('Security check'); // Handle unauthorized access here
+                die('Security check'); 
             }
 
-             // Assuming your class instance is $standardizeCsv
                 $standardizeCsv = new \Includes\Base\StandardizeCSV();
                 $standardizeCsv->run();
 
-                // Add success message
                 echo '<div class="updated"><p>CSV Standardization complete. The file has been processed successfully.</p></div>';
 
         }
         
-
+        //GET BRANDS and STYLE#
+        $csvFile = ABSPATH . 'wp-content/uploads/2024/06/SanMar_EPDD.csv'; 
+        $brands = []; 
+        // $styleTags = [];
         
+        if (($handle = fopen($csvFile, 'r')) !== false) {
+            $header = fgetcsv($handle); 
+            $brandLogoImageIndex = array_search('BRAND_LOGO_IMAGE', $header); 
+            // $styleTagIndex = array_search('STYLE#', $header); 
+
+            if ($brandLogoImageIndex === false) {
+                die('BRAND_LOGO_IMAGE column not found.');
+            }
+
+            // if ($styleTagIndex === false) {
+            //     die('STYLE# column not found.');
+            // }
+        
+            while (($data = fgetcsv($handle)) !== false) {
+                $brandLogoImage = $data[$brandLogoImageIndex]; 
+                // $styleTagData = $data[$styleTagIndex]; 
+
+                if (!empty($brandLogoImage)) { 
+                    $brands[] = $brandLogoImage; 
+                }
+                // if (!empty($styleTagData)) { 
+                //     $styleTags[] = $styleTagData; 
+                // }
+            }
+        
+            fclose($handle);
+        
+            // $styleTags = array_unique($styleTags);
+            $brands = array_unique($brands);
+        
+        } else {
+            die('Failed to open CSV file.');
+        }
+
+
+
+
+        if (isset($_POST['filter_by_brand'])) {  // Check if the form was submitted
+            if (isset($_POST['brands']) && is_array($_POST['brands'])) {
+                $selected_brands = array_map('trim', $_POST['brands']);  // Get selected brands
+                print_r($selected_brands);  // Debugging output
+        
+                $csv_file_path = ABSPATH . 'wp-content/uploads/2024/06/SanMar_EPDD.csv'; 
+                $filtered_csv_data = [];
+        
+                if (($handle = fopen($csv_file_path, 'r')) !== FALSE) {
+                    $header = fgetcsv($handle);  // Read the header row
+                    $brand_logo_index = array_search('BRAND_LOGO_IMAGE', $header);  // Get index of BRAND_LOGO_IMAGE column
+        
+                    if ($brand_logo_index === FALSE) {
+                        die('Required BRAND_LOGO_IMAGE column is missing in the CSV file.');
+                    }
+        
+                    // Add header to the filtered CSV data
+                    $filtered_csv_data[] = $header;
+        
+                    while (($row = fgetcsv($handle)) !== FALSE) {
+                        $brand_logo_image = $row[$brand_logo_index];
+        
+                        // Filter rows based on selected brands
+                        if (!empty($brand_logo_image) && in_array($brand_logo_image, $selected_brands, true)) {
+                            $filtered_csv_data[] = $row;
+                        }
+                    }
+                    fclose($handle);
+        
+                    // Save filtered CSV data to a new file named FilteredbyBrand.csv in the plugin folder
+                    $filtered_csv_file_path = ABSPATH . 'wp-content/uploads/VendorIntegration/FilteredbyBrand.csv'; 
+                    
+                    // Ensure the directory exists, if not, create it
+                    $filtered_csv_dir_path = dirname($filtered_csv_file_path);
+                    if (!file_exists($filtered_csv_dir_path)) {
+                        mkdir($filtered_csv_dir_path, 0755, true);
+                    }
+        
+                    if (($handle = fopen($filtered_csv_file_path, 'w')) !== FALSE) {
+                        foreach ($filtered_csv_data as $row) {
+                            fputcsv($handle, $row);
+                        }
+                        fclose($handle);
+                        echo 'Filtered CSV file created successfully: <a href="' . content_url('uploads/VendorIntegration/FilteredbyBrand.csv') . '">' . 'FilteredbyBrand.csv' . '</a>';
+                    } else {
+                        echo 'Failed to create the filtered CSV file.';
+                    }
+                } else {
+                    echo 'Failed to open the CSV file.';
+                }
+            } else {
+                echo 'No brands selected.';
+            }
+        }
+
+
+        //GET STYLE#
+        $csvFile = ABSPATH . 'wp-content/uploads/VendorIntegration/FilteredbyBrand.csv'; 
+        $styleTags = [];
+        
+        if (($handle = fopen($csvFile, 'r')) !== false) {
+            $header = fgetcsv($handle); 
+            $styleTagIndex = array_search('STYLE#', $header); 
+
+            if ($styleTagIndex === false) {
+                die('STYLE# column not found.');
+            }
+        
+            while (($data = fgetcsv($handle)) !== false) {
+                $styleTagData = $data[$styleTagIndex]; 
+                if (!empty($styleTagData)) { 
+                    $styleTags[] = $styleTagData; 
+                }
+            }
+        
+            fclose($handle);
+        
+            $styleTags = array_unique($styleTags);
+        
+        } else {
+            die('Failed to open CSV file.');
+        }
+
+
+        //FILTER BY STYLE
+        if (isset($_POST['filter_by_style'])) {  // Check if the form was submitted
+            if (isset($_POST['styleTags']) && is_array($_POST['styleTags'])) {
+                $selected_style_tags = array_map('trim', $_POST['styleTags']);  // Get selected style tags
+                print_r($selected_style_tags);  // Debugging output
+        
+                $csv_file_path = ABSPATH . 'wp-content/uploads/VendorIntegration/FilteredbyBrand.csv'; 
+                $filtered_csv_data = [];
+        
+                if (($handle = fopen($csv_file_path, 'r')) !== FALSE) {
+                    $header = fgetcsv($handle);  // Read the header row
+                    $style_tag_index = array_search('STYLE#', $header);  // Get index of STYLE_TAG column
+        
+                    if ($style_tag_index === FALSE) {
+                        die('Required STYLE_TAG column is missing in the CSV file.');
+                    }
+        
+                    // Add header to the filtered CSV data
+                    $filtered_csv_data[] = $header;
+        
+                    while (($row = fgetcsv($handle)) !== FALSE) {
+                        $style_tag = $row[$style_tag_index];
+        
+                        // Filter rows based on selected style tags
+                        if (!empty($style_tag) && in_array($style_tag, $selected_style_tags, true)) {
+                            $filtered_csv_data[] = $row;
+                        }
+                    }
+                    fclose($handle);
+        
+                    // Save filtered CSV data to a new file named FilteredbyStyle.csv in the plugin folder
+                    $filtered_csv_file_path = ABSPATH . 'wp-content/uploads/VendorIntegration/FilteredbyStyle.csv'; 
+        
+                    // Ensure the directory exists, if not, create it
+                    $filtered_csv_dir_path = dirname($filtered_csv_file_path);
+                    if (!file_exists($filtered_csv_dir_path)) {
+                        mkdir($filtered_csv_dir_path, 0755, true);
+                    }
+        
+                    if (($handle = fopen($filtered_csv_file_path, 'w')) !== FALSE) {
+                        foreach ($filtered_csv_data as $row) {
+                            fputcsv($handle, $row);
+                        }
+                        fclose($handle);
+                        echo 'Filtered CSV file created successfully: <a href="' . content_url('uploads/VendorIntegration/FilteredbyStyle.csv') . '">' . 'FilteredbyStyle.csv' . '</a>';
+                    } else {
+                        echo 'Failed to create the filtered CSV file.';
+                    }
+                } else {
+                    echo 'Failed to open the CSV file.';
+                }
+            } else {
+                echo 'No style tags selected.';
+            }
+        }
+
+
         // Display your admin page content
         ob_start();
         include($getThisTemplates['admin/admin.template']);
@@ -93,9 +268,7 @@ class Admin extends BaseController {
     
         echo $output; 
     }
-    
-    
-    
+
     public function save_setting() {
         
     }
