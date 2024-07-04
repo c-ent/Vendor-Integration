@@ -108,7 +108,17 @@ class Admin extends BaseController {
         $standardizeCsv = new \Includes\Base\StandardizeCSV();
         $standardizeCsv->run();
     
+        $uploads = wp_upload_dir();
+        $outputFileUrl = $uploads['url'] . '/FinalStandardize.csv';
+
         echo '<div class="updated"><p>CSV Standardization complete. The file has been processed successfully.</p></div>';
+        echo '<div><a href="' . esc_url($outputFileUrl) . '" id="download-link" download>Click here to download the file again</a></div>';
+        echo '<script type="text/javascript">
+            document.addEventListener("DOMContentLoaded", function() {
+                var link = document.getElementById("download-link");
+                link.click();
+            });
+        </script>';
     }
 
     private function process_brand_filter() {
